@@ -20,23 +20,24 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v3
         with:
-          token: <span class="math-inline">\{\{ secrets\.GITHUB\_TOKEN \}\}
-\- name\: Determine Build Condition and Agent Version
-id\: build\_condition
-run\: \|
-REMOTE\_VERSION\=</span>(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
-          echo "最新远程版本: <span class="math-inline">\{REMOTE\_VERSION\}"
-VERSION\_FILE\="\.github/last\_vision\.txt"
-LOCAL\_VERSION\="" \# Initialize LOCAL\_VERSION
-\# Determine if a build is needed based on trigger event
-if \[\[ "</span>{{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "push" ]]; then
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Build Condition and Agent Version
+        id: build_condition
+        run: |
+          REMOTE_VERSION=$(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
+          echo "最新远程版本: ${REMOTE_VERSION}"
+          VERSION_FILE=".github/last_vision.txt"
+          LOCAL_VERSION="" # Initialize LOCAL_VERSION
+          # Determine if a build is needed based on trigger event
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "push" ]]; then
             echo "手动触发或仓库改动，强制构建并忽略 last_vision.txt."
-            echo "SHOULD_BUILD=true" >> "<span class="math-inline">GITHUB\_OUTPUT"
-echo "AGENT\_VERSION\=</span>{REMOTE_VERSION}" >> "<span class="math-inline">GITHUB\_OUTPUT"
-elif \[\[ "</span>{{ github.event_name }}" == "schedule" ]]; then
+            echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
+            echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
             echo "定时任务触发，检查版本更新."
-            if [ -f "<span class="math-inline">VERSION\_FILE" \]; then
-LOCAL\_VERSION\=</span>(cat "$VERSION_FILE")
+            if [ -f "$VERSION_FILE" ]; then
+              LOCAL_VERSION=$(cat "$VERSION_FILE")
               echo "上次构建的本地版本: ${LOCAL_VERSION}"
             else
               LOCAL_VERSION="none"
@@ -45,8 +46,8 @@ LOCAL\_VERSION\=</span>(cat "$VERSION_FILE")
 
             if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
               echo "发现新版本! 将构建 Nezha Agent 版本: ${REMOTE_VERSION}"
-              echo "SHOULD_BUILD=true" >> "<span class="math-inline">GITHUB\_OUTPUT"
-echo "AGENT\_VERSION\=</span>{REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
+              echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
+              echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
             else
               echo "无新版本. 当前远程版本 ${REMOTE_VERSION} 与本地版本 ${LOCAL_VERSION} 相同. 跳过构建."
               echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
@@ -73,15 +74,15 @@ echo "AGENT\_VERSION\=</span>{REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push (multi-arch) to GHCR
-        if: <span class="math-inline">\{\{ steps\.build\_condition\.outputs\.SHOULD\_BUILD \=\= 'true' \}\}
-uses\: docker/build\-push\-action@v5
-with\:
-context\: \.
-push\: true
-platforms\: linux/amd64,linux/arm64
-tags\: \|
-ghcr\.io/</span>{{ github.repository_owner }}/nezha-agent:<span class="math-inline">\{\{ steps\.build\_condition\.outputs\.AGENT\_VERSION \}\}
-ghcr\.io/</span>{{ github.repository_owner }}/nezha-agent:latest
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
+            ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
           build-args: |
             AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
 
@@ -94,4 +95,4 @@ ghcr\.io/</span>{{ github.repository_owner }}/nezha-agent:latest
           repository: ${{ github.event.repository.name }}
           package_name: nezha-agent
           untagged_only: true
-          owner_type: ${{ github.event.repository.owner.type == 'Organization
+          owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'Organization' || 'User' }}
