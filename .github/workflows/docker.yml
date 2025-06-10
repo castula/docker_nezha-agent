@@ -1,4 +1,5 @@
 name: Docker Build and Push
+
 on:
   push:
     branches:
@@ -6,6 +7,7 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '0 */6 * * *'
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -13,59 +15,78 @@ jobs:
       contents: write
       packages: write
       id-token: write
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Check for new Nezha Agent version
-        id: check_version
-        run: |
-          REMOTE_VERSION=$(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
-          echo "最新远程版本: ${REMOTE_VERSION}"
-          VERSION_FILE=".github/last_built_agent_version.txt"
-          if [ -f "$VERSION_FILE" ]; then
-            LOCAL_VERSION=$(cat "$VERSION_FILE")
-            echo "上次构建的本地版本: ${LOCAL_VERSION}"
+          token: <span class="math-inline">\{\{ secrets\.GITHUB\_TOKEN \}\}
+\- name\: Determine Build Condition and Agent Version
+id\: build\_condition
+run\: \|
+REMOTE\_VERSION\=</span>(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
+          echo "最新远程版本: <span class="math-inline">\{REMOTE\_VERSION\}"
+VERSION\_FILE\="\.github/last\_vision\.txt"
+LOCAL\_VERSION\="" \# Initialize LOCAL\_VERSION
+\# Determine if a build is needed based on trigger event
+if \[\[ "</span>{{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "push" ]]; then
+            echo "手动触发或仓库改动，强制构建并忽略 last_vision.txt."
+            echo "SHOULD_BUILD=true" >> "<span class="math-inline">GITHUB\_OUTPUT"
+echo "AGENT\_VERSION\=</span>{REMOTE_VERSION}" >> "<span class="math-inline">GITHUB\_OUTPUT"
+elif \[\[ "</span>{{ github.event_name }}" == "schedule" ]]; then
+            echo "定时任务触发，检查版本更新."
+            if [ -f "<span class="math-inline">VERSION\_FILE" \]; then
+LOCAL\_VERSION\=</span>(cat "$VERSION_FILE")
+              echo "上次构建的本地版本: ${LOCAL_VERSION}"
+            else
+              LOCAL_VERSION="none"
+              echo "未找到本地版本文件. 将进行构建."
+            fi
+
+            if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+              echo "发现新版本! 将构建 Nezha Agent 版本: ${REMOTE_VERSION}"
+              echo "SHOULD_BUILD=true" >> "<span class="math-inline">GITHUB\_OUTPUT"
+echo "AGENT\_VERSION\=</span>{REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
+            else
+              echo "无新版本. 当前远程版本 ${REMOTE_VERSION} 与本地版本 ${LOCAL_VERSION} 相同. 跳过构建."
+              echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
+            fi
           else
-            LOCAL_VERSION="none"
-            echo "未找到本地版本文件. 将进行构建."
+            echo "未知触发事件: ${{ github.event_name }}. 默认不构建."
+            echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
           fi
-          if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
-            echo "发现新版本! 将构建 Nezha Agent 版本: ${REMOTE_VERSION}"
-            echo "NEW_VERSION_FOUND=true" >> "$GITHUB_OUTPUT"
-            echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
-          else
-            echo "无新版本. 当前远程版本 ${REMOTE_VERSION} 与本地版本 ${LOCAL_VERSION} 相同. 跳过构建."
-            echo "NEW_VERSION_FOUND=false" >> "$GITHUB_OUTPUT"
-          fi
+
       - name: Set up QEMU
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/setup-buildx-action@v3
+
       - name: Log in to GitHub Container Registry
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push (multi-arch) to GHCR
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.check_version.outputs.AGENT_VERSION }}
-            ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
+        if: <span class="math-inline">\{\{ steps\.build\_condition\.outputs\.SHOULD\_BUILD \=\= 'true' \}\}
+uses\: docker/build\-push\-action@v5
+with\:
+context\: \.
+push\: true
+platforms\: linux/amd64,linux/arm64
+tags\: \|
+ghcr\.io/</span>{{ github.repository_owner }}/nezha-agent:<span class="math-inline">\{\{ steps\.build\_condition\.outputs\.AGENT\_VERSION \}\}
+ghcr\.io/</span>{{ github.repository_owner }}/nezha-agent:latest
           build-args: |
-            AGENT_VERSION=${{ steps.check_version.outputs.AGENT_VERSION }}
+            AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
+
       - name: Delete untagged images from GHCR
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -73,14 +94,4 @@ jobs:
           repository: ${{ github.event.repository.name }}
           package_name: nezha-agent
           untagged_only: true
-          owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'org' || 'user' }}
-      - name: Update last built version file
-        if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
-        run: |
-          VERSION_FILE=".github/last_built_agent_version.txt"
-          echo "${{ steps.check_version.outputs.AGENT_VERSION }}" > "$VERSION_FILE"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "$VERSION_FILE"
-          git commit -m "chore: Update last built Nezha Agent version to ${{ steps.check_version.outputs.AGENT_VERSION }}" || echo "No changes to commit"
-          git push
+          owner_type: ${{ github.event.repository.owner.type == 'Organization
