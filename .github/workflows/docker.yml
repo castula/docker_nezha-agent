@@ -23,7 +23,7 @@ jobs:
         run: |
           REMOTE_VERSION=$(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
           echo "最新远程版本: ${REMOTE_VERSION}"
-          VERSION_FILE=".github/last_built_agent_version.txt"
+          VERSION_FILE=".github/last_version.txt"
           if [ -f "$VERSION_FILE" ]; then
             LOCAL_VERSION=$(cat "$VERSION_FILE")
             echo "上次构建的本地版本: ${LOCAL_VERSION}"
@@ -77,7 +77,7 @@ jobs:
       - name: Update last built version file
         if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
         run: |
-          VERSION_FILE=".github/last_built_agent_version.txt"
+          VERSION_FILE=".github/last_version.txt"
           echo "${{ steps.check_version.outputs.AGENT_VERSION }}" > "$VERSION_FILE"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
