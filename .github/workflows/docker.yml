@@ -95,4 +95,4 @@ jobs:
           repository: ${{ github.event.repository.name }}
           package_name: nezha-agent
           untagged_only: true
-          owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'Organization' || 'User' }}
+          owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'org' || 'user' }}
