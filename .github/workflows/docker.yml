@@ -1,4 +1,4 @@
-name: Docker Build and Push (Scheduled)
+name: Docker Build and Push
 
 on:
   push:
@@ -84,7 +84,7 @@ jobs:
           repository: ${{ github.event.repository.name }}
           package_name: nezha-agent
           untagged_only: true
-          owner_type: ${{ github.event.repository.owner.type | lower }} # 已修复：将 owner_type 转换为小写
+          owner_type: ${{ github.event.repository.owner.type | lower }}
 
       - name: Update last built version file
         if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
