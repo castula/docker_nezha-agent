@@ -10,7 +10,7 @@ disable_auto_update: ${DISABLE_AUTO_UPDATE:-true}
 disable_command_execute: ${DISABLE_COMMAND_EXECUTE:-true}
 disable_force_update: ${DISABLE_FORCE_UPDATE:-true}
 disable_nat: ${DISABLE_NAT:-true}
-disable_send_query: ${DISABLE_SEND_QUERY:-true}
+disable_send_query: ${DISABLE_SEND_QUERY:-false}
 gpu: ${GPU:-false}
 insecure_tls: ${INSECURE_TLS:-false}
 ip_report_period: ${IP_REPORT_PERIOD:-1800}
