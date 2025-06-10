@@ -84,7 +84,7 @@ jobs:
           repository: ${{ github.event.repository.name }}
           package_name: nezha-agent
           untagged_only: true
-          owner_type: ${{ github.event.repository.owner.type }}
+          owner_type: ${{ github.event.repository.owner.type | lower }} # 已修复：将 owner_type 转换为小写
 
       - name: Update last built version file
         if: ${{ steps.check_version.outputs.NEW_VERSION_FOUND == 'true' }}
