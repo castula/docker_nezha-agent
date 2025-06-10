@@ -1,15 +1,18 @@
 FROM --platform=$BUILDPLATFORM alpine:latest AS downloader
 
 ARG TARGETARCH
+# 新增 ARG AGENT_VERSION 来接收版本号
+ARG AGENT_VERSION 
 WORKDIR /builder
 
 RUN apk add --no-cache curl unzip
 
 # 下载对应架构的 nezha-agent
+# URL 中使用 ${AGENT_VERSION} 变量来获取最新版本
 RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      curl -Lo agent.zip https://github.com/nezhahq/agent/releases/download/latest/nezha-agent_linux_amd64.zip; \
+      curl -Lo agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_amd64.zip; \
     elif [ "$TARGETARCH" = "arm64" ]; then \
-      curl -Lo agent.zip https://github.com/nezhahq/agent/releases/download/latest/nezha-agent_linux_arm64.zip; \
+      curl -Lo agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_arm64.zip; \
     else \
       echo "Unsupported architecture: $TARGETARCH" && exit 1; \
     fi && \
