@@ -15,16 +15,17 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
 
       - name: Determine Build Condition and Agent Version
         id: build_condition
         run: |
           REMOTE_VERSION=$(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
           echo "最新远程版本: ${REMOTE_VERSION}"
-          VERSION_FILE=".github/last_vision.txt"
+          VERSION_FILE=".github/last_version.txt"
           LOCAL_VERSION=""
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
@@ -52,6 +53,12 @@ jobs:
             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Debug build condition
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+          echo "Should build: ${{ steps.build_condition.outputs.SHOULD_BUILD }}"
+          echo "Agent version: ${{ steps.build_condition.outputs.AGENT_VERSION }}"
+
       - name: Set up QEMU
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/setup-qemu-action@v3
@@ -75,6 +82,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Verify DockerHub login
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        run: |
+          echo "DockerHub username: ${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "Verifying Docker login..."
+          docker info
+
       - name: Build and push (multi-arch) to GHCR and DockerHub
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/build-push-action@v5
@@ -89,16 +103,42 @@ jobs:
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:latest
           build-args: |
             AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Save last version to file and commit
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         run: |
-          echo "${{ steps.build_condition.outputs.AGENT_VERSION }}" > .github/last_vision.txt
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .github/last_vision.txt
-          git commit -m "update: last_vision.txt to version ${{ steps.build_condition.outputs.AGENT_VERSION }}" || echo "No changes to commit"
-          git push
+          echo "${{ steps.build_condition.outputs.AGENT_VERSION }}" > .github/last_version.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/last_version.txt
+          
+          # 检查是否有变更需要提交
+          if git diff --staged --quiet; then
+            echo "没有变更需要提交"
+          else
+            echo "提交版本文件变更..."
+            git commit -m "chore: update last_version.txt to ${{ steps.build_condition.outputs.AGENT_VERSION }}"
+            
+            # 重试推送机制
+            for i in {1..3}; do
+              echo "尝试推送 (第 $i 次)..."
+              if git push; then
+                echo "推送成功!"
+                break
+              else
+                echo "推送失败，等待 5 秒后重试..."
+                sleep 5
+                git pull --rebase
+              fi
+              
+              if [ $i -eq 3 ]; then
+                echo "推送失败，已达到最大重试次数"
+                exit 1
+              fi
+            done
+          fi
 
       - name: Delete untagged images from GHCR
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
@@ -110,3 +150,18 @@ jobs:
           package_name: nezha-agent
           untagged_only: true
           owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'org' || 'user' }}
+
+      - name: Build Summary
+        if: always()
+        run: |
+          if [ "${{ steps.build_condition.outputs.SHOULD_BUILD }}" == "true" ]; then
+            echo "✅ 构建完成"
+            echo "📦 构建版本: ${{ steps.build_condition.outputs.AGENT_VERSION }}"
+            echo "🏷️ 推送标签:"
+            echo "  - ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}"
+            echo "  - ghcr.io/${{ github.repository_owner }}/nezha-agent:latest"
+            echo "  - docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}"
+            echo "  - docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:latest"
+          else
+            echo "⏭️ 跳过构建 - 无版本更新"
+          fi
