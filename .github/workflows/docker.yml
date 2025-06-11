@@ -3,7 +3,7 @@ name: Docker Build and Push
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'  # 每 6 小时一次
+    - cron: '0 */6 * * *'
 
 jobs:
   build-and-push:
@@ -27,10 +27,8 @@ jobs:
           VERSION_FILE=".github/last_vision.txt"
           LOCAL_VERSION=""
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "手动触发，检查版本是否更新."
-          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-            echo "定时任务触发，检查版本是否更新."
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "schedule" ]]; then
+            echo "由 ${{ github.event_name }} 触发，检查版本..."
           else
             echo "未知事件类型: ${{ github.event_name }}，跳过构建."
             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
@@ -41,8 +39,8 @@ jobs:
             LOCAL_VERSION=$(cat "$VERSION_FILE")
             echo "上次构建版本: $LOCAL_VERSION"
           else
-            echo "未发现版本文件，视为初次构建。"
             LOCAL_VERSION="none"
+            echo "未发现版本文件，视为初次构建。"
           fi
 
           if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
@@ -70,7 +68,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push (multi-arch) to GHCR
+      - name: Log in to DockerHub
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push (multi-arch) to GHCR and DockerHub
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
         uses: docker/build-push-action@v5
         with:
@@ -80,6 +85,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
             ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:latest
           build-args: |
             AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
 
