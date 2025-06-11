@@ -1,12 +1,9 @@
 name: Docker Build and Push
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */6 * * *'  # 每 6 小时一次
 
 jobs:
   build-and-push:
@@ -28,32 +25,32 @@ jobs:
           REMOTE_VERSION=$(curl -s "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
           echo "最新远程版本: ${REMOTE_VERSION}"
           VERSION_FILE=".github/last_vision.txt"
-          LOCAL_VERSION="" # Initialize LOCAL_VERSION
-          # Determine if a build is needed based on trigger event
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "push" ]]; then
-            echo "手动触发或仓库改动，强制构建并忽略 last_vision.txt."
+          LOCAL_VERSION=""
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "手动触发，检查版本是否更新."
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "定时任务触发，检查版本是否更新."
+          else
+            echo "未知事件类型: ${{ github.event_name }}，跳过构建."
+            echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -f "$VERSION_FILE" ]; then
+            LOCAL_VERSION=$(cat "$VERSION_FILE")
+            echo "上次构建版本: $LOCAL_VERSION"
+          else
+            echo "未发现版本文件，视为初次构建。"
+            LOCAL_VERSION="none"
+          fi
+
+          if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
+            echo "发现新版本: $REMOTE_VERSION, 准备构建."
             echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
             echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-            echo "定时任务触发，检查版本更新."
-            if [ -f "$VERSION_FILE" ]; then
-              LOCAL_VERSION=$(cat "$VERSION_FILE")
-              echo "上次构建的本地版本: ${LOCAL_VERSION}"
-            else
-              LOCAL_VERSION="none"
-              echo "未找到本地版本文件. 将进行构建."
-            fi
-
-            if [ "$REMOTE_VERSION" != "$LOCAL_VERSION" ]; then
-              echo "发现新版本! 将构建 Nezha Agent 版本: ${REMOTE_VERSION}"
-              echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
-              echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
-            else
-              echo "无新版本. 当前远程版本 ${REMOTE_VERSION} 与本地版本 ${LOCAL_VERSION} 相同. 跳过构建."
-              echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
-            fi
           else
-            echo "未知触发事件: ${{ github.event_name }}. 默认不构建."
+            echo "无版本更新，跳过构建."
             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -85,6 +82,16 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
           build-args: |
             AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
+
+      - name: Save last version to file and commit
+        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        run: |
+          echo "${{ steps.build_condition.outputs.AGENT_VERSION }}" > .github/last_vision.txt
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .github/last_vision.txt
+          git commit -m "update: last_vision.txt to version ${{ steps.build_condition.outputs.AGENT_VERSION }}" || echo "No changes to commit"
+          git push
 
       - name: Delete untagged images from GHCR
         if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
