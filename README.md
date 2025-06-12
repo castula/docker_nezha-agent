@@ -28,32 +28,6 @@
 
 ---
 
-## 📊 支持环境变量
-
-| 环境变量                      | 备注                | 默认值   |
-| ------------------------- | ----------------- | ----- |
-| `CLIENT_SECRET`           | 必填，Agent 秘钥       | -     |
-| `UUID`                    | 必填，服务器 UUID       | -     |
-| `SERVER`                  | 必填，服务器地址：IP\:PORT | -     |
-| `TLS`                     | 是否使用 TLS          | -     |
-| `DEBUG`                   | 开启调试日志            | false |
-| `DISABLE_AUTO_UPDATE`     | 禁止自动更新            | true  |
-| `DISABLE_COMMAND_EXECUTE` | 禁止运行命令            | true  |
-| `DISABLE_FORCE_UPDATE`    | 禁止强制更新            | true  |
-| `DISABLE_NAT`             | 禁止 NAT 模式         | true  |
-| `DISABLE_SEND_QUERY`      | 禁止发送 query        | false |
-| `GPU`                     | 开启 GPU 监控         | false |
-| `INSECURE_TLS`            | 不验证 TLS           | false |
-| `IP_REPORT_PERIOD`        | IP 上报周期(秒)        | 1800  |
-| `REPORT_DELAY`            | 上报延时              | 1     |
-| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | true  |
-| `SKIP_PROCS_COUNT`        | 略过进程计数            | true  |
-| `TEMPERATURE`             | 温度监控              | false |
-| `USE_GITEE_TO_UPGRADE`    | 使用 Gitee 更新       | false |
-| `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 上报地理位置        | true  |
-
----
-
 ## 🔄 快速启动
 
 ### 最简单启动：
@@ -69,6 +43,37 @@ docker run -d \
   -e TLS="true" \
   ghcr.io/castula/nezha-agent:latest
 ```
+
+### 全环境变量启动：
+
+```bash
+docker run -d \
+  --name nezha-agent \
+  --network host \
+  --restart always \
+  -e CLIENT_SECRET="your_client_secret" \
+  -e UUID="your_uuid" \
+  -e SERVER="your.server.com:5555" \
+  -e TLS="true" \
+  -e DEBUG="false" \
+  -e DISABLE_AUTO_UPDATE="true" \
+  -e DISABLE_COMMAND_EXECUTE="true" \
+  -e DISABLE_FORCE_UPDATE="true" \
+  -e DISABLE_NAT="true" \
+  -e DISABLE_SEND_QUERY="false" \
+  -e GPU="false" \
+  -e INSECURE_TLS="false" \
+  -e IP_REPORT_PERIOD="1800" \
+  -e REPORT_DELAY="1" \
+  -e SKIP_CONNECTION_COUNT="true" \
+  -e SKIP_PROCS_COUNT="true" \
+  -e TEMPERATURE="false" \
+  -e USE_GITEE_TO_UPGRADE="false" \
+  -e USE_IPV6_COUNTRY_CODE="true" \
+  ghcr.io/castula/nezha-agent:latest
+```
+
+---
 
 ## 🚿 Docker Compose 启动示例
 
@@ -105,34 +110,29 @@ docker run -d \
 
 ---
 
-### 全环境变量启动：
+## 📊 支持环境变量
 
-```bash
-docker run -d \
-  --name nezha-agent \
-  --network host \
-  --restart always \
-  -e CLIENT_SECRET="your_client_secret" \
-  -e UUID="your_uuid" \
-  -e SERVER="your.server.com:5555" \
-  -e TLS="true" \
-  -e DEBUG="false" \
-  -e DISABLE_AUTO_UPDATE="true" \
-  -e DISABLE_COMMAND_EXECUTE="true" \
-  -e DISABLE_FORCE_UPDATE="true" \
-  -e DISABLE_NAT="true" \
-  -e DISABLE_SEND_QUERY="false" \
-  -e GPU="false" \
-  -e INSECURE_TLS="false" \
-  -e IP_REPORT_PERIOD="1800" \
-  -e REPORT_DELAY="1" \
-  -e SKIP_CONNECTION_COUNT="true" \
-  -e SKIP_PROCS_COUNT="true" \
-  -e TEMPERATURE="false" \
-  -e USE_GITEE_TO_UPGRADE="false" \
-  -e USE_IPV6_COUNTRY_CODE="true" \
-  ghcr.io/castula/nezha-agent:latest
-```
+| 环境变量                      | 备注                | 默认值   |
+| ------------------------- | ----------------- | ----- |
+| `CLIENT_SECRET`           | 必填，Agent 秘钥       | -     |
+| `UUID`                    | 必填，服务器 UUID       | -     |
+| `SERVER`                  | 必填，服务器地址：IP\:PORT | -     |
+| `TLS`                     | 是否使用 TLS          | -     |
+| `DEBUG`                   | 开启调试日志            | false |
+| `DISABLE_AUTO_UPDATE`     | 禁止自动更新            | true  |
+| `DISABLE_COMMAND_EXECUTE` | 禁止运行命令            | true  |
+| `DISABLE_FORCE_UPDATE`    | 禁止强制更新            | true  |
+| `DISABLE_NAT`             | 禁止 NAT 模式         | true  |
+| `DISABLE_SEND_QUERY`      | 禁止发送 query        | false |
+| `GPU`                     | 开启 GPU 监控         | false |
+| `INSECURE_TLS`            | 不验证 TLS           | false |
+| `IP_REPORT_PERIOD`        | IP 上报周期(秒)        | 1800  |
+| `REPORT_DELAY`            | 上报延时              | 1     |
+| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | true  |
+| `SKIP_PROCS_COUNT`        | 略过进程计数            | true  |
+| `TEMPERATURE`             | 温度监控              | false |
+| `USE_GITEE_TO_UPGRADE`    | 使用 Gitee 更新       | false |
+| `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 上报地理位置        | true  |
 
 ---
 
