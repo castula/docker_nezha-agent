@@ -40,7 +40,7 @@ docker run -d \
   --restart always \
   -e CLIENT_SECRET="your_client_secret" \
   -e UUID="your_uuid" \
-  -e SERVER="your.server.com:5555" \
+  -e SERVER="your.server.com:443" \
   -e TLS="true" \
   ghcr.io/castula/nezha-agent:latest
 ```
@@ -54,7 +54,7 @@ docker run -d \
   --restart always \
   -e CLIENT_SECRET="your_client_secret" \
   -e UUID="your_uuid" \
-  -e SERVER="your.server.com:5555" \
+  -e SERVER="your.server.com:443" \
   -e TLS="true" \
   -e DEBUG="false" \
   -e DISABLE_AUTO_UPDATE="true" \
@@ -88,7 +88,7 @@ services:
     environment:
       CLIENT_SECRET: "your_client_secret"
       UUID: "your_uuid"
-      SERVER: "your.server.com:5555"
+      SERVER: "your.server.com:443"
       TLS: "true"
 ```
 
