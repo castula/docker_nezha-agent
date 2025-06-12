@@ -4,7 +4,7 @@ cat <<EOF > /app/config.yml
 client_secret: ${CLIENT_SECRET}
 uuid: ${UUID}
 server: ${SERVER}
-tls: ${TLS}
+tls: ${TLS:-false}
 debug: ${DEBUG:-false}
 disable_auto_update: ${DISABLE_AUTO_UPDATE:-true}
 disable_command_execute: ${DISABLE_COMMAND_EXECUTE:-true}
