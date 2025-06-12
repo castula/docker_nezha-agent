@@ -148,5 +148,5 @@ docker run -d \
 
 ## 🎉 感谢
 
-* 原项目：[Nezha Monitoring Agent](https://github.com/nezhahq/agent)
+* 原项目：[Nezha Agent](https://github.com/nezhahq/agent)
 * Docker 镜像打包设计、CI/CD Github Action 操作自动构建
