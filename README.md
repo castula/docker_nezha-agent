@@ -70,37 +70,6 @@ docker run -d \
   ghcr.io/castula/nezha-agent:latest
 ```
 
-### 全环境变量启动：
-
-```bash
-docker run -d \
-  --name nezha-agent \
-  --network host \
-  --restart always \
-  -e CLIENT_SECRET="your_client_secret" \
-  -e UUID="your_uuid" \
-  -e SERVER="your.server.com:5555" \
-  -e TLS="true" \
-  -e DEBUG="false" \
-  -e DISABLE_AUTO_UPDATE="true" \
-  -e DISABLE_COMMAND_EXECUTE="true" \
-  -e DISABLE_FORCE_UPDATE="true" \
-  -e DISABLE_NAT="true" \
-  -e DISABLE_SEND_QUERY="false" \
-  -e GPU="false" \
-  -e INSECURE_TLS="false" \
-  -e IP_REPORT_PERIOD="1800" \
-  -e REPORT_DELAY="1" \
-  -e SKIP_CONNECTION_COUNT="true" \
-  -e SKIP_PROCS_COUNT="true" \
-  -e TEMPERATURE="false" \
-  -e USE_GITEE_TO_UPGRADE="false" \
-  -e USE_IPV6_COUNTRY_CODE="true" \
-  ghcr.io/castula/nezha-agent:latest
-```
-
----
-
 ## 🚿 Docker Compose 启动示例
 
 ```yaml
@@ -133,6 +102,37 @@ docker run -d \
 ```
 
 若插入 config.yml ，则会忽略环境变量，直接启动。
+
+---
+
+### 全环境变量启动：
+
+```bash
+docker run -d \
+  --name nezha-agent \
+  --network host \
+  --restart always \
+  -e CLIENT_SECRET="your_client_secret" \
+  -e UUID="your_uuid" \
+  -e SERVER="your.server.com:5555" \
+  -e TLS="true" \
+  -e DEBUG="false" \
+  -e DISABLE_AUTO_UPDATE="true" \
+  -e DISABLE_COMMAND_EXECUTE="true" \
+  -e DISABLE_FORCE_UPDATE="true" \
+  -e DISABLE_NAT="true" \
+  -e DISABLE_SEND_QUERY="false" \
+  -e GPU="false" \
+  -e INSECURE_TLS="false" \
+  -e IP_REPORT_PERIOD="1800" \
+  -e REPORT_DELAY="1" \
+  -e SKIP_CONNECTION_COUNT="true" \
+  -e SKIP_PROCS_COUNT="true" \
+  -e TEMPERATURE="false" \
+  -e USE_GITEE_TO_UPGRADE="false" \
+  -e USE_IPV6_COUNTRY_CODE="true" \
+  ghcr.io/castula/nezha-agent:latest
+```
 
 ---
 
