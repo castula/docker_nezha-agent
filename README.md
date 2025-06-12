@@ -117,8 +117,8 @@ docker run -d \
 | ------------------------- | ----------------- | ----- |
 | `CLIENT_SECRET`           | 必填，Agent 秘钥       | -     |
 | `UUID`                    | 服务器 UUID，留空则自动生成       | -     |
-| `SERVER`                  | 必填，服务器地址：IP\:PORT | -     |
-| `TLS`                     | 是否使用 TLS          | -     |
+| `SERVER`                  | 必填，服务器地址：IP/域名:PORT | -     |
+| `TLS`                     | 是否使用 TLS          | false     |
 | `DEBUG`                   | 开启调试日志            | false |
 | `DISABLE_AUTO_UPDATE`     | 禁止自动更新            | true  |
 | `DISABLE_COMMAND_EXECUTE` | 禁止运行命令            | true  |
