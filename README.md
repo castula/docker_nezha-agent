@@ -42,7 +42,7 @@
 | `DISABLE_FORCE_UPDATE`    | 禁止强制更新            | true  |
 | `DISABLE_NAT`             | 禁止 NAT 模式         | true  |
 | `DISABLE_SEND_QUERY`      | 禁止发送 query        | false |
-| `GPU`                     | 支持 GPU 监控         | false |
+| `GPU`                     | 开启 GPU 监控         | false |
 | `INSECURE_TLS`            | 不验证 TLS           | false |
 | `IP_REPORT_PERIOD`        | IP 上报周期(秒)        | 1800  |
 | `REPORT_DELAY`            | 上报延时              | 1     |
@@ -50,7 +50,7 @@
 | `SKIP_PROCS_COUNT`        | 略过进程计数            | true  |
 | `TEMPERATURE`             | 温度监控              | false |
 | `USE_GITEE_TO_UPGRADE`    | 使用 Gitee 更新       | false |
-| `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 国籍        | true  |
+| `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 上报地理位置        | true  |
 
 ---
 
