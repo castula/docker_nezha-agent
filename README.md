@@ -1,4 +1,4 @@
-# nezha-agent Docker 🚀
+# Nezha-Agent Docker 🚀
 
 > 自动构建最新的 [nezha-agent](https://github.com/nezhahq/agent) Docker 镜像
 
@@ -29,6 +29,7 @@
 ---
 
 ## 🔄 快速启动
+> 💡 留空或删除**`UUID`**变量时会自动生成UUID
 
 ### 最简单启动：
 
@@ -115,7 +116,7 @@ docker run -d \
 | 环境变量                      | 备注                | 默认值   |
 | ------------------------- | ----------------- | ----- |
 | `CLIENT_SECRET`           | 必填，Agent 秘钥       | -     |
-| `UUID`                    | 必填，服务器 UUID       | -     |
+| `UUID`                    | 服务器 UUID，留空则自动生成       | -     |
 | `SERVER`                  | 必填，服务器地址：IP\:PORT | -     |
 | `TLS`                     | 是否使用 TLS          | -     |
 | `DEBUG`                   | 开启调试日志            | false |
