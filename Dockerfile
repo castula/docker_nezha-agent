@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM alpine:latest AS downloader
+FROM --platform=$BUILDPLATFORM alpine:edge AS downloader
 
 ARG TARGETARCH
 # 新增 ARG AGENT_VERSION 来接收版本号
