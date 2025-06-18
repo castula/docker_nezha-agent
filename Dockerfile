@@ -19,7 +19,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     unzip agent.zip
 
 # 最终镜像阶段
-FROM alpine:latest
+FROM alpine:edge
 
 WORKDIR /app
 
