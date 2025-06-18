@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM alpine:edge AS downloader
+FROM --platform=$BUILDPLATFORM alpine:latest AS downloader
 
 ARG TARGETARCH
 # 新增 ARG AGENT_VERSION 来接收版本号
@@ -19,7 +19,7 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     unzip agent.zip
 
 # 最终镜像阶段
-FROM alpine:edge
+FROM alpine:latest
 
 WORKDIR /app
 
