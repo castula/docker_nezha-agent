@@ -81,7 +81,7 @@ docker run -d \
 ```yaml
 services:
   nezha-agent:
-    image: ghcr.io/castula/nezha-agent:latest
+    image: spousal4806/nezha-agent:latest
     container_name: nezha-agent
     network_mode: host
     restart: always
@@ -104,7 +104,7 @@ docker run -d \
   --network host \
   --restart always \
   -v /path/to/your/config.yml:/app/config.yml \
-  ghcr.io/castula/nezha-agent:latest
+  spousal4806/nezha-agent:latest
 ```
 
 若插入 config.yml ，则会忽略环境变量，直接启动。
