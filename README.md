@@ -11,7 +11,7 @@
 * 默认镜像地址：
 
   * `ghcr.io/castula/nezha-agent:latest`
-  * `docker.io/spousal4806/nezha-agent:latest`
+  * `spousal4806/nezha-agent:latest`
 
 * Github Action 自动构建体系已搭建，每6小时检测最新 Release，如有更新则自动构建并提交 version 文件。
 
@@ -42,7 +42,7 @@ docker run -d \
   -e UUID="your_uuid" \
   -e SERVER="your.server.com:443" \
   -e TLS="true" \
-  ghcr.io/castula/nezha-agent:latest
+  spousal4806/nezha-agent:latest
 ```
 
 ### 全环境变量启动：
@@ -71,7 +71,7 @@ docker run -d \
   -e TEMPERATURE="false" \
   -e USE_GITEE_TO_UPGRADE="false" \
   -e USE_IPV6_COUNTRY_CODE="true" \
-  ghcr.io/castula/nezha-agent:latest
+  spousal4806/nezha-agent:latest
 ```
 
 ---
