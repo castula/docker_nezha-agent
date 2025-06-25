@@ -38,7 +38,7 @@ docker run -d \
   --name nezha-agent \
   --network host \
   --restart always \
-  -v /proc:/host_proc:ro \
+  -v /proc:/proc:ro \
   -e CLIENT_SECRET="your_client_secret" \
   -e UUID="your_uuid" \
   -e SERVER="your.server.com:443" \
@@ -53,7 +53,7 @@ docker run -d \
   --name nezha-agent \
   --network host \
   --restart always \
-  -v /proc:/host_proc:ro \
+  -v /proc:/proc:ro \
   -e CLIENT_SECRET="your_client_secret" \
   -e UUID="your_uuid" \
   -e SERVER="your.server.com:443" \
@@ -107,7 +107,7 @@ docker run -d \
   --name nezha-agent \
   --network host \
   --restart always \
-  -v /proc:/host_proc:ro \
+  -v /proc:/proc:ro \
   -v /path/to/your/config.yml:/app/config.yml \
   spousal4806/nezha-agent:latest
 ```
