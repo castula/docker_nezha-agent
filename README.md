@@ -93,7 +93,7 @@ services:
       SERVER: "your.server.com:443"
       TLS: "true"
     volumes:
-      - /proc:/host_proc:ro
+      - /proc:/proc:ro
 ```
 
 ---
