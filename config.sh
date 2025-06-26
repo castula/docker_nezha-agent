@@ -15,8 +15,8 @@ gpu: ${GPU:-false}
 insecure_tls: ${INSECURE_TLS:-false}
 ip_report_period: ${IP_REPORT_PERIOD:-1800}
 report_delay: ${REPORT_DELAY:-1}
-skip_connection_count: ${SKIP_CONNECTION_COUNT:-true}
-skip_procs_count: ${SKIP_PROCS_COUNT:-true}
+skip_connection_count: ${SKIP_CONNECTION_COUNT:-false}
+skip_procs_count: ${SKIP_PROCS_COUNT:-false}
 temperature: ${TEMPERATURE:-false}
 use_gitee_to_upgrade: ${USE_GITEE_TO_UPGRADE:-false}
 use_ipv6_country_code: ${USE_IPV6_COUNTRY_CODE:-true}
