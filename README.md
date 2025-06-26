@@ -68,8 +68,8 @@ docker run -d \
   -e INSECURE_TLS="false" \
   -e IP_REPORT_PERIOD="1800" \
   -e REPORT_DELAY="1" \
-  -e SKIP_CONNECTION_COUNT="true" \
-  -e SKIP_PROCS_COUNT="true" \
+  -e SKIP_CONNECTION_COUNT="false" \
+  -e SKIP_PROCS_COUNT="false" \
   -e TEMPERATURE="false" \
   -e USE_GITEE_TO_UPGRADE="false" \
   -e USE_IPV6_COUNTRY_CODE="true" \
@@ -134,8 +134,8 @@ docker run -d \
 | `INSECURE_TLS`            | 不验证 TLS           | false |
 | `IP_REPORT_PERIOD`        | IP 上报周期(秒)        | 1800  |
 | `REPORT_DELAY`            | 上报延时              | 1     |
-| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | true  |
-| `SKIP_PROCS_COUNT`        | 略过进程计数            | true  |
+| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | false  |
+| `SKIP_PROCS_COUNT`        | 略过进程计数            | false  |
 | `TEMPERATURE`             | 温度监控              | false |
 | `USE_GITEE_TO_UPGRADE`    | 使用 Gitee 更新       | false |
 | `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 上报地理位置        | true  |
