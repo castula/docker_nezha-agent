@@ -12,7 +12,9 @@ jobs:
       contents: write
       packages: write
       id-token: write
-
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
