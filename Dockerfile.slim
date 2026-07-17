@@ -1,0 +1,53 @@
+# ============================================
+# Builder
+# ============================================
+FROM --platform=$BUILDPLATFORM alpine:3.24 AS downloader
+
+ARG TARGETARCH
+ARG AGENT_VERSION
+
+WORKDIR /builder
+
+RUN apk add --no-cache curl unzip
+
+# 下载对应架构的 nezha-agent
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+      curl -fsSL -o agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_amd64.zip; \
+    elif [ "$TARGETARCH" = "arm64" ]; then \
+      curl -fsSL -o agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_arm64.zip; \
+    else \
+      echo "Unsupported architecture: $TARGETARCH"; \
+      exit 1; \
+    fi && \
+    unzip agent.zip
+
+# 下载 Mozilla CA Bundle
+RUN mkdir -p /builder/etc/ssl/certs && \
+    curl -fsSL \
+      https://curl.se/ca/cacert.pem \
+      -o /builder/etc/ssl/certs/ca-certificates.crt
+
+
+# ============================================
+# Runtime (Slim)
+# ============================================
+FROM busybox:busybox:1.38-musl
+
+WORKDIR /app
+
+# SSL 证书
+COPY --from=downloader /builder/etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+
+# Agent
+COPY --from=downloader /builder/nezha-agent /app/nezha-agent
+
+# 配置脚本
+COPY config.sh /app/config.sh
+
+# 权限
+RUN chmod +x /app/nezha-agent /app/config.sh
+
+# 若没有挂载 config.yml，则自动根据环境变量生成
+ENTRYPOINT ["sh", "-c", "[ -f /app/config.yml ] || /app/config.sh; exec /app/nezha-agent -c /app/config.yml"]
