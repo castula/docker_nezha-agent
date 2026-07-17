@@ -1,4 +1,4 @@
-name: Manual Docker Build and Push
+name: Alpine Manual Build and Push
 
 on:
   workflow_dispatch:
