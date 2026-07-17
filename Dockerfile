@@ -1,13 +1,11 @@
-FROM --platform=$BUILDPLATFORM debian:stable-slim AS downloader
+FROM --platform=$BUILDPLATFORM alpine:latest AS downloader
 
 ARG TARGETARCH
 # 新增 ARG AGENT_VERSION 来接收版本号
-ARG AGENT_VERSION
+ARG AGENT_VERSION 
 WORKDIR /builder
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl unzip ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl unzip
 
 # 下载对应架构的 nezha-agent
 # URL 中使用 ${AGENT_VERSION} 变量来获取最新版本
@@ -21,14 +19,12 @@ RUN if [ "$TARGETARCH" = "amd64" ]; then \
     unzip agent.zip
 
 # 最终镜像阶段
-FROM debian:stable-slim
+FROM alpine:edge
 
 WORKDIR /app
 
 # 安装必要工具
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends bash ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache bash
 
 # 拷贝 agent 可执行文件和配置脚本
 COPY --from=downloader /builder/nezha-agent /app/nezha-agent
