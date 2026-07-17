@@ -19,7 +19,7 @@
 
 ## 🔧 镜像构建逻辑
 
-* 基于 Alpine Linux 构建简洁小镜像
+* 基于 Debian slim 构建简洁小镜像
 * 先通过 curl + unzip 下载并解压 nezha-agent release 包
 * 支持 TARGETARCH (amd64/arm64)
 * 支持多张原生架构
@@ -67,10 +67,12 @@ docker run -d \
   -e GPU="false" \
   -e INSECURE_TLS="false" \
   -e IP_REPORT_PERIOD="1800" \
-  -e REPORT_DELAY="1" \
-  -e SKIP_CONNECTION_COUNT="false" \
-  -e SKIP_PROCS_COUNT="false" \
+  -e REPORT_DELAY="3" \
+  -e SELF_UPDATE_PERIOD="0" \
+  -e SKIP_CONNECTION_COUNT="true" \
+  -e SKIP_PROCS_COUNT="true" \
   -e TEMPERATURE="false" \
+  -e USE_ATOMGIT_TO_UPGRADE="false" \
   -e USE_GITEE_TO_UPGRADE="false" \
   -e USE_IPV6_COUNTRY_CODE="true" \
   spousal4806/nezha-agent:latest
@@ -133,10 +135,12 @@ docker run -d \
 | `GPU`                     | 开启 GPU 监控         | false |
 | `INSECURE_TLS`            | 不验证 TLS           | false |
 | `IP_REPORT_PERIOD`        | IP 上报周期(秒)        | 1800  |
-| `REPORT_DELAY`            | 上报延时              | 1     |
-| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | false  |
-| `SKIP_PROCS_COUNT`        | 略过进程计数            | false  |
+| `REPORT_DELAY`            | 上报延时(秒)           | 3     |
+| `SELF_UPDATE_PERIOD`      | 自我更新周期(分钟)，0 为禁用  | 0     |
+| `SKIP_CONNECTION_COUNT`   | 略过连接计数            | true  |
+| `SKIP_PROCS_COUNT`        | 略过进程计数            | true  |
 | `TEMPERATURE`             | 温度监控              | false |
+| `USE_ATOMGIT_TO_UPGRADE`  | 使用 AtomGit 更新     | false |
 | `USE_GITEE_TO_UPGRADE`    | 使用 Gitee 更新       | false |
 | `USE_IPV6_COUNTRY_CODE`   | 使用 IPv6 上报地理位置        | true  |
 
