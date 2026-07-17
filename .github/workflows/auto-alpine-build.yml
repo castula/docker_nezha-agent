@@ -1,4 +1,4 @@
-name: Docker Build and Push
+name: Alpine Auto Build and Push
 
 on:
   workflow_dispatch:
