@@ -1,4 +1,4 @@
-name: Manual BusyBox Slim Build
+name: BusyBox Manual Build and Push
 
 on:
   workflow_dispatch:
