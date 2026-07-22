@@ -180,9 +180,7 @@ docker run -d \
 * 原项目：
   [Nezha Agent](https://github.com/nezhahq/agent)
 
-* Docker 镜像设计、Dockerfile 编写、GitHub Actions 自动化构建：
-
-  **ChatGPT Assisted Development**
+* Docker 镜像设计、Dockerfile 编写、GitHub Actions 自动化构建：**ChatGPT**
 
 
   
