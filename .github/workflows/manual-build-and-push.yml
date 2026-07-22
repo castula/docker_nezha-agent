@@ -1,39 +1,52 @@
-name: BusyBox Manual Build and Push
+name: Manual Build and Push
 
 on:
   workflow_dispatch:
 
+
 jobs:
   build-and-push:
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: write
       packages: write
       id-token: write
 
+
     steps:
+
       - name: Checkout source
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
+
+
       - name: Get Latest Version
         id: build_condition
         run: |
           set -e
 
-          REMOTE_VERSION=$(curl -fsSL "https://api.github.com/repos/nezhahq/agent/releases/latest" | jq -r .tag_name)
+          REMOTE_VERSION=$(curl -fsSL \
+          "https://api.github.com/repos/nezhahq/agent/releases/latest" \
+          | jq -r .tag_name)
 
           echo "最新远程版本: ${REMOTE_VERSION}"
+
 
           if [ -z "$REMOTE_VERSION" ] || [ "$REMOTE_VERSION" = "null" ]; then
             echo "获取版本失败"
             exit 1
           fi
 
+
           echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
           echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
+
+
 
       - name: Debug build condition
         run: |
@@ -41,85 +54,173 @@ jobs:
           echo "Should build: ${{ steps.build_condition.outputs.SHOULD_BUILD }}"
           echo "Agent version: ${{ steps.build_condition.outputs.AGENT_VERSION }}"
 
+
+
       - name: Set up QEMU
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/setup-qemu-action@v3
 
+
+
       - name: Set up Docker Buildx
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/setup-buildx-action@v3
 
+
+
       - name: Log in to GitHub Container Registry
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+
+
       - name: Log in to DockerHub
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push BusyBox Slim Image
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+
+
+      - name: Build and push BusyBox image
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/build-push-action@v5
         with:
+
           context: .
-          file: Dockerfile.slim
+
           push: true
+
           platforms: linux/amd64,linux/arm64
+
+
           tags: |
+
+            ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
+
+            ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
+
             ghcr.io/${{ github.repository_owner }}/nezha-agent:slim
+
+
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
+
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:latest
+
             docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:slim
+
+
+
           build-args: |
             AGENT_VERSION=${{ steps.build_condition.outputs.AGENT_VERSION }}
+
+
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+
+
+
       - name: Delete untagged images from GHCR
-        if: ${{ steps.build_condition.outputs.SHOULD_BUILD == 'true' }}
+        if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
+
           token: ${{ secrets.GITHUB_TOKEN }}
+
           repository_owner: ${{ github.repository_owner }}
+
           repository: ${{ github.event.repository.name }}
+
           package_name: nezha-agent
+
           untagged_only: true
+
           owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'org' || 'user' }}
+
+
+
 
       - name: Build Summary
         if: always()
         run: |
+
           if [ "${{ steps.build_condition.outputs.SHOULD_BUILD }}" = "true" ]; then
+
             echo "=========================================="
-            echo "✅ BusyBox Slim 构建完成"
+
+            echo "✅ BusyBox 镜像构建完成"
+
             echo ""
+
             echo "📦 Agent 版本:"
-            echo "  ${{ steps.build_condition.outputs.AGENT_VERSION }}"
+            echo "${{ steps.build_condition.outputs.AGENT_VERSION }}"
+
             echo ""
+
             echo "🏷️ 推送标签:"
+
+            echo "  ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}"
+
+            echo "  ghcr.io/${{ github.repository_owner }}/nezha-agent:latest"
+
             echo "  ghcr.io/${{ github.repository_owner }}/nezha-agent:slim"
+
+
+            echo ""
+
+            echo "  docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}"
+
+            echo "  docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:latest"
+
             echo "  docker.io/${{ secrets.DOCKERHUB_USERNAME }}/nezha-agent:slim"
+
+
             echo "=========================================="
+
+
           else
+
             echo "⏭️ 跳过构建"
+
           fi
 
+
+
+
   cleanup:
+
     runs-on: ubuntu-latest
+
     needs: build-and-push
 
+
     steps:
+
       - name: Cleanup old workflow runs (keep last 3)
+
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
+
         run: |
-          gh api repos/${{ github.repository }}/actions/runs --paginate --jq '.workflow_runs | sort_by(.created_at) | reverse | .[3:] | .[].id' | \
-          while read run_id; do
+
+          gh api repos/${{ github.repository }}/actions/runs \
+          --paginate \
+          --jq '.workflow_runs | sort_by(.created_at) | reverse | .[3:] | .[].id' | \
+
+          while read run_id;
+
+          do
+
             echo "Deleting workflow run $run_id"
-            gh api repos/${{ github.repository }}/actions/runs/$run_id -X DELETE
+
+            gh api \
+            repos/${{ github.repository }}/actions/runs/$run_id \
+            -X DELETE
+
           done
