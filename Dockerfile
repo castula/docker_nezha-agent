@@ -31,7 +31,7 @@ RUN mkdir -p /builder/etc/ssl/certs && \
 # ============================================
 # Runtime (Slim)
 # ============================================
-FROM busybox:glibc
+FROM busybox:uclibc
 
 WORKDIR /app
 
