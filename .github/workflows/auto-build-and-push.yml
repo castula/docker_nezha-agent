@@ -3,7 +3,7 @@ name: Auto Build and Push
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '*/30 * * * *'
 
 
 jobs:
