@@ -52,7 +52,7 @@
 
 ## 🔄 快速启动
 - 留空或删除`UUID`变量时会自动生成`UUID`
-### 最简单启动：
+### 🐳 Docker 启动示例：
 
 ```bash
 docker run -d \
@@ -75,7 +75,7 @@ docker run -d \
 
 ---
 
-## 🚿 Docker Compose 启动示例
+## 🐳 Docker Compose 启动示例
 
 ```yaml
 services:
@@ -111,7 +111,13 @@ docker run -d \
   --name nezha-agent \
   --network host \
   --restart always \
-  -v /proc:/proc:ro \
+  -v /proc:/host/proc:ro \
+  -v /sys:/host/sys:ro \
+  -v /etc:/host/etc:ro \
+  -v /etc/os-release:/info/etc/os-release:ro \
+  -e HOST_PROC="/host/proc" \
+  -e HOST_SYS="/host/sys" \
+  -e HOST_ETC="/host/etc" \
   -v /path/to/your/config.yml:/app/config.yml \
   spousal4806/nezha-agent:latest
 ```
