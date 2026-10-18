@@ -51,7 +51,7 @@
 ---
 
 ## 🔄 快速启动
-* 留空或删除`UUID`变量时会自动生成`UUID`
+- 留空或删除`UUID`变量时会自动生成`UUID`
 ### 最简单启动：
 
 ```bash
@@ -59,43 +59,17 @@ docker run -d \
   --name nezha-agent \
   --network host \
   --restart always \
-  -v /proc:/proc:ro \
+  -v /proc:/host/proc:ro \
+  -v /sys:/host/sys:ro \
+  -v /etc:/host/etc:ro \
+  -v /etc/os-release:/info/etc/os-release:ro \
+  -e HOST_PROC="/host/proc" \
+  -e HOST_SYS="/host/sys" \
+  -e HOST_ETC="/host/etc" \
   -e CLIENT_SECRET="your_client_secret" \
   -e UUID="your_uuid" \
   -e SERVER="your.server.com:443" \
   -e TLS="false" \
-  spousal4806/nezha-agent:latest
-```
-
-### 全环境变量启动：
-
-```bash
-docker run -d \
-  --name nezha-agent \
-  --network host \
-  --restart always \
-  -v /proc:/proc:ro \
-  -e CLIENT_SECRET="your_client_secret" \
-  -e UUID="your_uuid" \
-  -e SERVER="your.server.com:443" \
-  -e TLS="false" \
-  -e DEBUG="false" \
-  -e DISABLE_AUTO_UPDATE="true" \
-  -e DISABLE_COMMAND_EXECUTE="true" \
-  -e DISABLE_FORCE_UPDATE="true" \
-  -e DISABLE_NAT="true" \
-  -e DISABLE_SEND_QUERY="false" \
-  -e GPU="false" \
-  -e INSECURE_TLS="false" \
-  -e IP_REPORT_PERIOD="1800" \
-  -e REPORT_DELAY="3" \
-  -e SELF_UPDATE_PERIOD="0" \
-  -e SKIP_CONNECTION_COUNT="true" \
-  -e SKIP_PROCS_COUNT="true" \
-  -e TEMPERATURE="false" \
-  -e USE_ATOMGIT_TO_UPGRADE="false" \
-  -e USE_GITEE_TO_UPGRADE="false" \
-  -e USE_IPV6_COUNTRY_CODE="true" \
   spousal4806/nezha-agent:latest
 ```
 
@@ -111,13 +85,20 @@ services:
     network_mode: host
     restart: always
     environment:
+      HOST_PROC: "/host/proc"
+      HOST_SYS: "/host/sys"
+      HOST_ETC: "/host/etc"
       CLIENT_SECRET: "your_client_secret"
       UUID: "your_uuid"
       SERVER: "your.server.com:443"
       TLS: "false"
     volumes:
-      - /proc:/proc:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc:/host/etc:ro
+      - /etc/os-release:/info/etc/os-release:ro
 ```
+
 
 ---
 
