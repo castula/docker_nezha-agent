@@ -1,7 +1,7 @@
 name: Weekly Cleanup Old Images
 
 on:
-  workflow_dispatch: # 允许手动触发测试
+  workflow_dispatch: # 允许在 GitHub Actions 页面手动触发测试
   schedule:
     - cron: '0 2 * * 0' # 每周日 UTC 02:00（北京时间周日 10:00）运行一次
 
@@ -14,34 +14,39 @@ jobs:
 
     env:
       IMAGE_NAME: nezha-agent
-      KEEP_VERSIONS: 15
+      KEEP_VERSIONS: 5 # 设定只保留最新的 5 个版本
 
     steps:
       # ==========================================
       # 1. 清理 GHCR (GitHub Container Registry)
       # ==========================================
-      - name: Cleanup GHCR old tagged versions (Keep last 15)
+      - name: Cleanup GHCR old tagged versions (Keep last 5)
         env:
-          # 注意：删除 GHCR 包版本通常需要具有 delete:packages 权限的 PAT
-          # 如果 GITHUB_TOKEN 报 403 权限不足，请替换为 ${{ secrets.GH_PAT }}
-          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          # 直接使用自带的 GITHUB_TOKEN（配合上方的 packages: write 权限）
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
           OWNER_TYPE: ${{ github.event.repository.owner.type == 'Organization' && 'orgs' || 'users' }}
         run: |
           set -e
           echo "🔍 正在获取 GHCR (${OWNER}/${IMAGE_NAME}) 的镜像版本列表..."
 
-          # 获取所有包含普通版本号 Tag（仅排除 latest）的版本，按创建时间倒序排列，跳过前 15 个
-          OLD_VERSION_IDS=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" \
-            | jq -r '
-              map(select(
-                (.metadata.container.tags | length > 0) and
-                ((.metadata.container.tags | index("latest")) == null)
-              ))
-              | sort_by(.created_at) | reverse
-              | .['"${KEEP_VERSIONS}"':]
-              | .[].id
-            ')
+          # 获取 JSON 数据并检查 API 是否正常返回数组
+          if ! RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null); then
+            echo "⚠️ 使用 GITHUB_TOKEN 访问被拒，正在尝试使用 GH_PAT..."
+            export GH_TOKEN="${{ secrets.GH_PAT }}"
+            RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100")
+          fi
+
+          # 获取所有带有版本号的 Tag（仅排除 latest），按创建时间倒序排列，跳过前 5 个
+          OLD_VERSION_IDS=$(echo "$RESPONSE" | jq -r '
+            map(select(
+              (.metadata.container.tags | length > 0) and
+              ((.metadata.container.tags | index("latest")) == null)
+            ))
+            | sort_by(.created_at) | reverse
+            | .['"${KEEP_VERSIONS}"':]
+            | .[].id
+          ')
 
           if [ -z "$OLD_VERSION_IDS" ]; then
             echo "✅ GHCR 当前历史版本数量未超过 ${KEEP_VERSIONS} 个，无需删除。"
@@ -53,10 +58,10 @@ jobs:
             echo "✅ GHCR 旧版本标签清理完成。"
           fi
 
-      - name: Delete orphaned untagged images from GHCR
+      - name: Delete untagged images from GHCR
         uses: Chizkiyahu/delete-untagged-ghcr-action@v6
         with:
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           repository_owner: ${{ github.repository_owner }}
           repository: ${{ github.event.repository.name }}
           package_name: ${{ env.IMAGE_NAME }}
@@ -66,7 +71,7 @@ jobs:
       # ==========================================
       # 2. 清理 Docker Hub
       # ==========================================
-      - name: Cleanup Docker Hub old tags (Keep last 15)
+      - name: Cleanup Docker Hub old tags (Keep last 5)
         env:
           DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DH_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -100,7 +105,7 @@ jobs:
             NEXT_URL=$(echo "$RESPONSE" | jq -r '.next')
           done
 
-          # 仅排除 latest，按最后更新时间倒序排列，取第 15 个之后的旧标签
+          # 仅排除 latest，按最后更新时间倒序排列，取第 5 个之后的旧标签
           OLD_TAGS=$(echo "$ALL_TAGS_JSON" | jq -r '
             map(select(.name != "latest"))
             | sort_by(.last_updated) | reverse
