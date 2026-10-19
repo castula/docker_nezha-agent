@@ -1,0 +1,128 @@
+name: Weekly Cleanup Old Images
+
+on:
+  workflow_dispatch: # 允许手动触发测试
+  schedule:
+    - cron: '0 2 * * 0' # 每周日 UTC 02:00（北京时间周日 10:00）运行一次
+
+jobs:
+  cleanup-images:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+
+    env:
+      IMAGE_NAME: nezha-agent
+      KEEP_VERSIONS: 15
+
+    steps:
+      # ==========================================
+      # 1. 清理 GHCR (GitHub Container Registry)
+      # ==========================================
+      - name: Cleanup GHCR old tagged versions (Keep last 15)
+        env:
+          # 注意：删除 GHCR 包版本通常需要具有 delete:packages 权限的 PAT
+          # 如果 GITHUB_TOKEN 报 403 权限不足，请替换为 ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+          OWNER_TYPE: ${{ github.event.repository.owner.type == 'Organization' && 'orgs' || 'users' }}
+        run: |
+          set -e
+          echo "🔍 正在获取 GHCR (${OWNER}/${IMAGE_NAME}) 的镜像版本列表..."
+
+          # 获取所有包含普通版本号 Tag（仅排除 latest）的版本，按创建时间倒序排列，跳过前 15 个
+          OLD_VERSION_IDS=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" \
+            | jq -r '
+              map(select(
+                (.metadata.container.tags | length > 0) and
+                ((.metadata.container.tags | index("latest")) == null)
+              ))
+              | sort_by(.created_at) | reverse
+              | .['"${KEEP_VERSIONS}"':]
+              | .[].id
+            ')
+
+          if [ -z "$OLD_VERSION_IDS" ]; then
+            echo "✅ GHCR 当前历史版本数量未超过 ${KEEP_VERSIONS} 个，无需删除。"
+          else
+            for vid in $OLD_VERSION_IDS; do
+              echo "🗑️ 正在删除 GHCR 旧版本 ID: $vid"
+              gh api --method DELETE "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions/$vid"
+            done
+            echo "✅ GHCR 旧版本标签清理完成。"
+          fi
+
+      - name: Delete orphaned untagged images from GHCR
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v6
+        with:
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          repository_owner: ${{ github.repository_owner }}
+          repository: ${{ github.event.repository.name }}
+          package_name: ${{ env.IMAGE_NAME }}
+          untagged_only: true
+          owner_type: ${{ github.event.repository.owner.type == 'Organization' && 'org' || 'user' }}
+
+      # ==========================================
+      # 2. 清理 Docker Hub
+      # ==========================================
+      - name: Cleanup Docker Hub old tags (Keep last 15)
+        env:
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_PASS: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$DH_USER" ] || [ -z "$DH_PASS" ]; then
+            echo "⚠️ 未检测到 Docker Hub 凭据，跳过 Docker Hub 清理。"
+            exit 0
+          fi
+
+          echo "🔐 正在登录 Docker Hub API..."
+          JWT_TOKEN=$(curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"username\": \"${DH_USER}\", \"password\": \"${DH_PASS}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          if [ -z "$JWT_TOKEN" ] || [ "$JWT_TOKEN" == "null" ]; then
+            echo "❌ Docker Hub 登录失败，请检查 DOCKERHUB_USERNAME 和 DOCKERHUB_TOKEN（需具备 Delete 权限）。"
+            exit 1
+          fi
+
+          echo "🔍 正在获取 Docker Hub (${DH_USER}/${IMAGE_NAME}) 的标签列表..."
+          NEXT_URL="https://hub.docker.com/v2/repositories/${DH_USER}/${IMAGE_NAME}/tags/?page_size=100"
+          ALL_TAGS_JSON="[]"
+
+          # 分页拉取所有 Tags
+          while [ -n "$NEXT_URL" ] && [ "$NEXT_URL" != "null" ]; do
+            RESPONSE=$(curl -s -H "Authorization: JWT ${JWT_TOKEN}" "$NEXT_URL")
+            PAGE_RESULTS=$(echo "$RESPONSE" | jq '.results // []')
+            ALL_TAGS_JSON=$(jq -s '.[0] + .[1]' <(echo "$ALL_TAGS_JSON") <(echo "$PAGE_RESULTS"))
+            NEXT_URL=$(echo "$RESPONSE" | jq -r '.next')
+          done
+
+          # 仅排除 latest，按最后更新时间倒序排列，取第 15 个之后的旧标签
+          OLD_TAGS=$(echo "$ALL_TAGS_JSON" | jq -r '
+            map(select(.name != "latest"))
+            | sort_by(.last_updated) | reverse
+            | .['"${KEEP_VERSIONS}"':]
+            | .[].name
+          ')
+
+          if [ -z "$OLD_TAGS" ]; then
+            echo "✅ Docker Hub 当前历史版本数量未超过 ${KEEP_VERSIONS} 个，无需删除。"
+          else
+            for tag in $OLD_TAGS; do
+              echo "🗑️ 正在删除 Docker Hub 旧标签: $tag"
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+                -X DELETE \
+                -H "Authorization: JWT ${JWT_TOKEN}" \
+                "https://hub.docker.com/v2/repositories/${DH_USER}/${IMAGE_NAME}/tags/${tag}/")
+              
+              if [ "$HTTP_CODE" -eq 204 ] || [ "$HTTP_CODE" -eq 200 ]; then
+                echo "   -> 删除成功 ($tag)"
+              else
+                echo "   -> ⚠️ 删除失败 ($tag)，HTTP 状态码: $HTTP_CODE"
+              fi
+            done
+            echo "✅ Docker Hub 旧版本清理完成。"
+          fi
