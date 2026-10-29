@@ -7,7 +7,7 @@
 
 ## 🌟 仓库简介
 
-本项目自动检测 nezha-agent 最新 Release，并自动构建 multi-arch（amd64 + arm64）Docker 镜像，同时同步发布到 GitHub Container Registry 和 DockerHub。
+本项目自动检测 nezha-agent 最新 Release，并自动构建 multi-arch（amd64 + arm64 + armv7）Docker 镜像，同时同步发布到 GitHub Container Registry 和 DockerHub。
 
 本项目采用 **BusyBox:musl 作为基础镜像**，在保证 nezha-agent 正常运行的同时，尽可能降低镜像体积和运行资源占用。
 
@@ -29,7 +29,7 @@
 * 基于 **BusyBox:musl** 构建
 * 极小镜像体积
 * 低内存占用
-* 支持 amd64 / arm64 多架构
+* 支持 amd64 / arm64 / armv7 多架构
 * 自动追踪 nezha-agent 最新 Release
 * GitHub Actions 自动构建
 * 支持 DockerHub 与 GHCR 双仓库同步
@@ -43,7 +43,7 @@
 
 * 基于 Busybox:muslin 构建简洁小镜像
 * 先通过 curl + unzip 下载并解压 nezha-agent release 包
-* 支持 TARGETARCH (amd64/arm64)
+* 支持 TARGETARCH (amd64/arm64/armv7)
 * 支持多张原生架构
 * 支持用户通过环境变量传入 config.yml 配置
 * 如果插入了 config.yml，则使用外部配置，否则动态生成
@@ -157,7 +157,7 @@ docker run -d \
 ## 🚀 GitHub Action 自动构建
 
 * 每 6 小时检测 nezha-agent 最新 Release
-* 自动构建 amd64 / arm64
+* 自动构建 amd64 / arm64 / armv7
 * 自动推送 GHCR 与 DockerHub
 * 自动维护版本记录 `.github/last_version.txt`
 ---
