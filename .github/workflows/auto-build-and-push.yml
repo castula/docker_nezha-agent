@@ -3,8 +3,7 @@ name: Auto Build and Push
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'
-
+    - cron: '0 */6 * * *' # 改为每 6 小时检查一次，避免过度消耗 API 额度
 
 jobs:
   build-and-push:
@@ -25,14 +24,20 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Determine Build Condition and Download Artifacts
+      - name: Determine Build Condition
         id: build_condition
         run: |
           set -e
 
-          REMOTE_VERSION=$(curl -s \
+          # 加上 Authorization 头部，防止触发 GitHub API 速率限制 (Rate Limit)
+          REMOTE_VERSION=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           https://api.github.com/repos/nezhahq/agent/releases/latest \
           | jq -r .tag_name)
+
+          if [ -z "$REMOTE_VERSION" ] || [ "$REMOTE_VERSION" = "null" ]; then
+            echo "错误: 无法获取远程版本"
+            exit 1
+          fi
 
           echo "最新远程版本: ${REMOTE_VERSION}"
 
@@ -59,16 +64,7 @@ jobs:
             echo "发现新版本: $REMOTE_VERSION"
             echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
             echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
-
-            mkdir -p build-context
-
-            for arch in amd64 arm64
-            do
-              echo "下载 ${arch}"
-              curl -fL \
-              -o build-context/nezha-agent_linux_${arch}.zip \
-              https://github.com/nezhahq/agent/releases/download/${REMOTE_VERSION}/nezha-agent_linux_${arch}.zip
-            done
+            # 注：删除了原本在这里多此一举的 zip 包下载，交给 Dockerfile 内部的多架构阶段去处理
           else
             echo "无版本更新"
             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
@@ -103,7 +99,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push BusyBox musl image
+      - name: Build and push image
         if: steps.build_condition.outputs.SHOULD_BUILD == 'true'
         uses: docker/build-push-action@v5
         with:
@@ -171,7 +167,7 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.build_condition.outputs.SHOULD_BUILD }}" = "true" ]; then
-            echo "✅ BusyBox musl 构建完成"
+            echo "✅ 构建完成"
             echo "📦 构建版本:"
             echo "${{ steps.build_condition.outputs.AGENT_VERSION }}"
             echo "🏷️ 推送标签:"
