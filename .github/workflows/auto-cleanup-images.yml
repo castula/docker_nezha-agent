@@ -22,30 +22,44 @@ jobs:
       # ==========================================
       - name: Cleanup GHCR old tagged versions (Keep last 5)
         env:
-          # 直接使用自带的 GITHUB_TOKEN（配合上方的 packages: write 权限）
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER: ${{ github.repository_owner }}
+          # 针对 GH API，如果是 Organization 用 orgs，如果是 User 建议使用统一的 user 路径或兼容判断
           OWNER_TYPE: ${{ github.event.repository.owner.type == 'Organization' && 'orgs' || 'users' }}
         run: |
-          set -e
+          set +e # 暂时关闭严苛退出，以便优雅处理 API 降级
           echo "🔍 正在获取 GHCR (${OWNER}/${IMAGE_NAME}) 的镜像版本列表..."
 
-          # 获取 JSON 数据并检查 API 是否正常返回数组
-          if ! RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null); then
-            echo "⚠️ 使用 GITHUB_TOKEN 访问被拒，正在尝试使用 GH_PAT..."
+          # 尝试使用自带的 GITHUB_TOKEN 获取
+          RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null)
+          
+          # 如果失败且配置了 GH_PAT，则切换使用 GH_PAT
+          if [ -z "$RESPONSE" ] && [ -n "${{ secrets.GH_PAT }}" ]; then
+            echo "⚠️ 默认 Token 访问受限，正在尝试切换使用 GH_PAT..."
             export GH_TOKEN="${{ secrets.GH_PAT }}"
-            RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100")
+            RESPONSE=$(gh api --paginate "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions?per_page=100" 2>/dev/null)
+          fi
+
+          set -e # 恢复严苛模式
+
+          if [ -z "$RESPONSE" ]; then
+            echo "❌ 无法获取 GHCR 版本列表，请检查 GITHUB_TOKEN 的 packages:write 权限或 GH_PAT 是否有效。"
+            exit 1
           fi
 
           # 获取所有带有版本号的 Tag（仅排除 latest），按创建时间倒序排列，跳过前 5 个
-          OLD_VERSION_IDS=$(echo "$RESPONSE" | jq -r '
-            map(select(
-              (.metadata.container.tags | length > 0) and
-              ((.metadata.container.tags | index("latest")) == null)
-            ))
-            | sort_by(.created_at) | reverse
-            | .['"${KEEP_VERSIONS}"':]
-            | .[].id
+          OLD_VERSION_IDS=$(echo "$RESPONSE" | jq -r --argjson keep "${KEEP_VERSIONS}" '
+            if type == "array" then
+              map(select(
+                (.metadata.container.tags | length > 0) and
+                ((.metadata.container.tags | index("latest")) == null)
+              ))
+              | sort_by(.created_at) | reverse
+              | .[$keep:]
+              | .[].id
+            else
+              empty
+            end
           ')
 
           if [ -z "$OLD_VERSION_IDS" ]; then
@@ -53,7 +67,7 @@ jobs:
           else
             for vid in $OLD_VERSION_IDS; do
               echo "🗑️ 正在删除 GHCR 旧版本 ID: $vid"
-              gh api --method DELETE "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions/$vid"
+              gh api --method DELETE "/${OWNER_TYPE}/${OWNER}/packages/container/${IMAGE_NAME}/versions/$vid" || echo "   -> ⚠️ 删除版本 $vid 失败，可能已被清理或无权限"
             done
             echo "✅ GHCR 旧版本标签清理完成。"
           fi
@@ -83,13 +97,15 @@ jobs:
           fi
 
           echo "🔐 正在登录 Docker Hub API..."
-          JWT_TOKEN=$(curl -s -H "Content-Type: application/json" \
+          LOGIN_RESPONSE=$(curl -s -H "Content-Type: application/json" \
             -X POST \
             -d "{\"username\": \"${DH_USER}\", \"password\": \"${DH_PASS}\"}" \
-            https://hub.docker.com/v2/users/login/ | jq -r .token)
+            https://hub.docker.com/v2/users/login/)
+            
+          JWT_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r .token // empty)
 
           if [ -z "$JWT_TOKEN" ] || [ "$JWT_TOKEN" == "null" ]; then
-            echo "❌ Docker Hub 登录失败，请检查 DOCKERHUB_USERNAME 和 DOCKERHUB_TOKEN（需具备 Delete 权限）。"
+            echo "❌ Docker Hub 登录失败，请确保 DOCKERHUB_USERNAME 正确，且 DOCKERHUB_TOKEN 具备 Delete 权限。"
             exit 1
           fi
 
@@ -102,15 +118,19 @@ jobs:
             RESPONSE=$(curl -s -H "Authorization: JWT ${JWT_TOKEN}" "$NEXT_URL")
             PAGE_RESULTS=$(echo "$RESPONSE" | jq '.results // []')
             ALL_TAGS_JSON=$(jq -s '.[0] + .[1]' <(echo "$ALL_TAGS_JSON") <(echo "$PAGE_RESULTS"))
-            NEXT_URL=$(echo "$RESPONSE" | jq -r '.next')
+            NEXT_URL=$(echo "$RESPONSE" | jq -r '.next // empty')
           done
 
           # 仅排除 latest，按最后更新时间倒序排列，取第 5 个之后的旧标签
-          OLD_TAGS=$(echo "$ALL_TAGS_JSON" | jq -r '
-            map(select(.name != "latest"))
-            | sort_by(.last_updated) | reverse
-            | .['"${KEEP_VERSIONS}"':]
-            | .[].name
+          OLD_TAGS=$(echo "$ALL_TAGS_JSON" | jq -r --argjson keep "${KEEP_VERSIONS}" '
+            if type == "array" then
+              map(select(.name != "latest"))
+              | sort_by(.last_updated) | reverse
+              | .[$keep:]
+              | .[].name
+            else
+              empty
+            end
           ')
 
           if [ -z "$OLD_TAGS" ]; then
