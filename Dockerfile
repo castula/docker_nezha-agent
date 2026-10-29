@@ -14,10 +14,10 @@ RUN apk add --no-cache curl unzip
 RUN case "${TARGETARCH}" in \
       amd64) ARCH="amd64" ;; \
       arm64) ARCH="arm64" ;; \
-      arm)   ARCH="armv7" ;; \
+      arm)   ARCH="arm"   ;; \
       *)     echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac && \
-    echo "Downloading nezha-agent for ${ARCH} (version ${AGENT_VERSION})..." && \
+    echo "Downloading nezha-agent for linux_${ARCH} (version ${AGENT_VERSION})..." && \
     curl -fsSL -o agent.zip \
       https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_${ARCH}.zip && \
     unzip agent.zip
