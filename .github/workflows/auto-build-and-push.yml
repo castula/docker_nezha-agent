@@ -64,7 +64,6 @@ jobs:
             echo "发现新版本: $REMOTE_VERSION"
             echo "SHOULD_BUILD=true" >> "$GITHUB_OUTPUT"
             echo "AGENT_VERSION=${REMOTE_VERSION}" >> "$GITHUB_OUTPUT"
-            # 注：删除了原本在这里多此一举的 zip 包下载，交给 Dockerfile 内部的多架构阶段去处理
           else
             echo "无版本更新"
             echo "SHOULD_BUILD=false" >> "$GITHUB_OUTPUT"
@@ -108,6 +107,7 @@ jobs:
           platforms: |
             linux/amd64
             linux/arm64
+            linux/arm/v7
           tags: |
             ghcr.io/${{ github.repository_owner }}/nezha-agent:${{ steps.build_condition.outputs.AGENT_VERSION }}
             ghcr.io/${{ github.repository_owner }}/nezha-agent:latest
