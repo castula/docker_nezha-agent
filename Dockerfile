@@ -10,15 +10,16 @@ WORKDIR /builder
 
 RUN apk add --no-cache curl unzip
 
-# 下载对应架构的 nezha-agent
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-      curl -fsSL -o agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_amd64.zip; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
-      curl -fsSL -o agent.zip https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_arm64.zip; \
-    else \
-      echo "Unsupported architecture: $TARGETARCH"; \
-      exit 1; \
-    fi && \
+# 根据 Docker 的 $TARGETARCH 映射到哪吒官方的架构命名
+RUN case "${TARGETARCH}" in \
+      amd64) ARCH="amd64" ;; \
+      arm64) ARCH="arm64" ;; \
+      arm)   ARCH="armv7" ;; \
+      *)     echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    echo "Downloading nezha-agent for ${ARCH} (version ${AGENT_VERSION})..." && \
+    curl -fsSL -o agent.zip \
+      https://github.com/nezhahq/agent/releases/download/${AGENT_VERSION}/nezha-agent_linux_${ARCH}.zip && \
     unzip agent.zip
 
 # 下载 Mozilla CA Bundle
