@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# 检查关键必填环境变量
+if [ -z "${SERVER}" ] || [ -z "${CLIENT_SECRET}" ]; then
+    echo "Error: Environment variables SERVER and CLIENT_SECRET must be set!" >&2
+    exit 1
+fi
+
+echo "Generating /app/config.yml from environment variables..."
+
 cat <<EOF > /app/config.yml
 client_secret: ${CLIENT_SECRET}
 uuid: ${UUID}
@@ -23,3 +31,5 @@ use_atomgit_to_upgrade: ${USE_ATOMGIT_TO_UPGRADE:-false}
 use_gitee_to_upgrade: ${USE_GITEE_TO_UPGRADE:-false}
 use_ipv6_country_code: ${USE_IPV6_COUNTRY_CODE:-true}
 EOF
+
+echo "Configuration generated successfully."
