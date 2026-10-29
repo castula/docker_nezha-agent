@@ -28,7 +28,9 @@ jobs:
         run: |
           set -e
 
+          # 加上 Authorization 头部，防止触发 GitHub API 速率限制
           REMOTE_VERSION=$(curl -fsSL \
+          -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           "https://api.github.com/repos/nezhahq/agent/releases/latest" \
           | jq -r .tag_name)
 
